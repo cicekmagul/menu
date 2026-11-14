@@ -60,11 +60,11 @@
             pointer-events: none;
         }
 
-        /* --- ŞİFRE / KARŞILAMA EKRANI --- */
+        /* --- ŞİFRE EKRANI --- */
         #lock-screen {
             position: fixed;
             inset: 0;
-            background: rgba(250, 246, 240, 0.96);
+            background: rgba(250, 246, 240, 0.94);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             display: flex;
@@ -72,7 +72,7 @@
             justify-content: center;
             padding: 24px;
             z-index: 100;
-            transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1), transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+            transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1), transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         #lock-screen.unlocked {
@@ -128,7 +128,7 @@
             font-size: 18px;
             font-weight: 600;
             text-align: center;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
             color: var(--text-primary);
             outline: none;
             transition: border-color 0.25s ease, box-shadow 0.25s ease;
@@ -180,7 +180,7 @@
             padding: 28px 20px 80px;
             opacity: 0;
             transform: translateY(15px);
-            transition: opacity 0.45s ease 0.1s, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.1s;
+            transition: opacity 0.5s ease 0.15s, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.15s;
         }
 
         #menu-app.visible {
@@ -489,18 +489,18 @@
 <body>
 
     <!-- ARKA PLAN MÜZİĞİ -->
-    <audio id="bg-music" loop preload="metadata">
+    <audio id="bg-music" loop preload="auto">
         <source src="muzik.mp3" type="audio/mpeg">
     </audio>
 
-    <!-- ŞİFRE / KARŞILAMA EKRANI -->
+    <!-- ŞİFRE GİRİŞ EKRANI -->
     <div id="lock-screen">
         <div class="lock-card" id="lock-card">
             <div class="lock-icon">☕</div>
-            <h1 id="lock-title">Özel Menü</h1>
-            <p id="lock-desc">İçecek listesini görmek için giriş şifresini yaz.</p>
-            <input type="password" id="password-input" class="pass-input" placeholder="••••" autocomplete="off" autocapitalize="none">
-            <button type="button" id="unlock-btn" class="pass-btn">Menüyü Aç</button>
+            <h1>Özel Menü</h1>
+            <p>İçecek listesini görmek için giriş şifresini yaz.</p>
+            <input type="password" id="password-input" class="pass-input" placeholder="••••" autocomplete="off">
+            <button id="unlock-btn" class="pass-btn">Menüyü Aç</button>
             <div id="error-msg" class="error-msg"></div>
         </div>
     </div>
@@ -559,36 +559,16 @@
         // ==========================================
         const SHEET_ID = "1DaNNim2_3VMIS0daOPrbijp68-i5UXO7t_38XUchdFY"; 
         const MENU_SIFRESI = "muhendiscicek"; 
-        const SIFREYI_HATIRLA = true;
         const KAPAK_FOTOSU = "kapak.jpg";
         const LOGO_FOTOSU = "logo.png";
-        const VARSAYILAN_SES_SEVIYESI = 0.45;
+        const VARSAYILAN_SES_SEVIYESI = 0.45; // 0.0 (sessiz) ile 1.0 (tam ses) arası
         // ==========================================
 
         let allDrinks = [];
         let currentCategory = null;
 
-        // Güvenli localStorage okuma/yazma (QR okuyucu tarayıcılarda hata vermemesi için)
-        function getSavedAuth() {
-            try {
-                return localStorage.getItem("qr_menu_auth");
-            } catch (e) {
-                return null;
-            }
-        }
-
-        function setSavedAuth(val) {
-            try {
-                localStorage.setItem("qr_menu_auth", val);
-            } catch (e) {}
-        }
-
-        let isAlreadySaved = SIFREYI_HATIRLA && (getSavedAuth() === MENU_SIFRESI.toLocaleLowerCase('tr-TR'));
-
         const lockScreen = document.getElementById("lock-screen");
         const lockCard = document.getElementById("lock-card");
-        const lockTitle = document.getElementById("lock-title");
-        const lockDesc = document.getElementById("lock-desc");
         const passInput = document.getElementById("password-input");
         const unlockBtn = document.getElementById("unlock-btn");
         const errorMsg = document.getElementById("error-msg");
@@ -607,10 +587,7 @@
 
         heroImg.src = KAPAK_FOTOSU;
         logoImg.src = LOGO_FOTOSU;
-
-        try {
-            bgMusic.volume = VARSAYILAN_SES_SEVIYESI;
-        } catch (e) {}
+        bgMusic.volume = VARSAYILAN_SES_SEVIYESI;
 
         function updateMusicUI(isPlaying) {
             if (isPlaying) {
@@ -622,60 +599,39 @@
             }
         }
 
-        function safePlayMusic() {
-            try {
-                const playPromise = bgMusic.play();
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        updateMusicUI(true);
-                    }).catch(() => {
-                        updateMusicUI(false);
-                    });
-                }
-            } catch (e) {
+        function startMusic() {
+            bgMusic.play().then(() => {
+                updateMusicUI(true);
+            }).catch(() => {
+                // Tarayıcı otomatik çalmayı engellerse ilk dokunuşta başlat
                 updateMusicUI(false);
-            }
+                const resumeOnTouch = () => {
+                    bgMusic.play().then(() => updateMusicUI(true)).catch(() => {});
+                    document.removeEventListener("pointerdown", resumeOnTouch);
+                };
+                document.addEventListener("pointerdown", resumeOnTouch, { once: true });
+            });
         }
 
         musicToggle.addEventListener("click", (e) => {
             e.stopPropagation();
             if (bgMusic.paused) {
-                safePlayMusic();
+                bgMusic.play().then(() => updateMusicUI(true)).catch(() => {});
             } else {
                 bgMusic.pause();
                 updateMusicUI(false);
             }
         });
 
-        function unlockMenu(instant) {
-            if (instant) {
-                lockScreen.style.display = "none";
-            } else {
-                lockScreen.classList.add("unlocked");
-                setTimeout(() => {
-                    lockScreen.style.display = "none";
-                }, 450);
-            }
-            menuApp.classList.add("visible");
-            fetchSheetData();
+        if (localStorage.getItem("qr_menu_auth") === MENU_SIFRESI) {
+            unlockMenu(true);
         }
 
         function checkPassword() {
-            if (isAlreadySaved) {
+            if (passInput.value.trim() === MENU_SIFRESI) {
+                localStorage.setItem("qr_menu_auth", MENU_SIFRESI);
+                startMusic(); // Şifre butonuna tıklandığı an müziği başlat
                 unlockMenu(false);
-                safePlayMusic();
-                return;
-            }
-
-            const girilen = passInput.value.trim().toLocaleLowerCase('tr-TR');
-            const dogruSifre = MENU_SIFRESI.trim().toLocaleLowerCase('tr-TR');
-
-            if (girilen === dogruSifre) {
-                if (SIFREYI_HATIRLA) {
-                    setSavedAuth(dogruSifre);
-                }
-                unlockMenu(false);
-                safePlayMusic();
             } else {
                 errorMsg.textContent = "Hatalı şifre, tekrar dene.";
                 lockCard.classList.remove("shake");
@@ -685,8 +641,116 @@
             }
         }
 
-        // Daha önce şifre girildiyse şifre kutusunu gizle, tek tıkla giriş sun
-        if (isAlreadySaved) {
-            lockTitle.textContent = "Tekrar Hoş Geldin";
-            lockDesc.textContent = "Müziği ve menüyü başlatmak için dokun.";
-            passInput.style.display = "
+        function unlockMenu(instant) {
+            if (instant) {
+                lockScreen.style.display = "none";
+                startMusic();
+            } else {
+                lockScreen.classList.add("unlocked");
+                setTimeout(() => lockScreen.style.display = "none", 500);
+            }
+            menuApp.classList.add("visible");
+            fetchSheetData();
+        }
+
+        unlockBtn.addEventListener("click", checkPassword);
+        passInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") checkPassword();
+        });
+
+        function showHomeScreen() {
+            currentCategory = null;
+            tabBtns.forEach(b => b.classList.remove("active"));
+            menuView.classList.add("hidden");
+            homeView.classList.remove("hidden");
+        }
+
+        backHomeBtn.addEventListener("click", showHomeScreen);
+        headerTrigger.addEventListener("click", showHomeScreen);
+
+        async function fetchSheetData() {
+            try {
+                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+                const response = await fetch(url);
+                const text = await response.text();
+                const jsonString = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
+                const data = JSON.parse(jsonString);
+
+                const rows = data.table.rows;
+                allDrinks = rows.map(row => {
+                    const c = row.c;
+                    return {
+                        kategori: c[0] && c[0].v ? String(c[0].v).trim() : "",
+                        ad: c[1] && c[1].v ? String(c[1].v).trim() : "",
+                        icerik: c[2] && c[2].v ? String(c[2].v).trim() : "",
+                        resim: c[3] && c[3].v ? String(c[3].v).trim() : ""
+                    };
+                }).filter(item => item.ad !== "" && item.ad.toLocaleLowerCase('tr-TR') !== "ad");
+
+                if (currentCategory) {
+                    renderMenu(currentCategory);
+                }
+            } catch (err) {
+                menuList.innerHTML = `<div class="status-box">Menü yüklenemedi. Tablo paylaşım ayarını kontrol et.</div>`;
+            }
+        }
+
+        function renderMenu(category) {
+            homeView.classList.add("hidden");
+            menuView.classList.remove("hidden");
+
+            const filtered = allDrinks.filter(
+                d => d.kategori.toLocaleLowerCase('tr-TR') === category.toLocaleLowerCase('tr-TR')
+            );
+
+            if (filtered.length === 0) {
+                menuList.innerHTML = `<div class="status-box">Bu kategoride henüz içecek yok.</div>`;
+                return;
+            }
+
+            menuList.innerHTML = "";
+            filtered.forEach((drink, index) => {
+                const card = document.createElement("div");
+                card.className = "drink-card";
+                card.style.animationDelay = `${index * 0.05}s`;
+
+                if (drink.resim) {
+                    const imgEl = document.createElement("img");
+                    imgEl.className = "drink-thumb";
+                    imgEl.src = drink.resim;
+                    imgEl.alt = drink.ad;
+                    imgEl.onerror = () => imgEl.style.display = "none";
+                    card.appendChild(imgEl);
+                }
+
+                const infoEl = document.createElement("div");
+                infoEl.className = "drink-info";
+
+                const nameEl = document.createElement("div");
+                nameEl.className = "drink-name";
+                nameEl.textContent = drink.ad;
+                infoEl.appendChild(nameEl);
+
+                if (drink.icerik) {
+                    const descEl = document.createElement("div");
+                    descEl.className = "drink-desc";
+                    descEl.textContent = drink.icerik;
+                    infoEl.appendChild(descEl);
+                }
+
+                card.appendChild(infoEl);
+                menuList.appendChild(card);
+            });
+        }
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener("click", () => {
+                tabBtns.forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                currentCategory = btn.dataset.cat;
+                renderMenu(currentCategory);
+            });
+        });
+    </script>
+</body>
+</html>
