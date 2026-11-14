@@ -60,7 +60,7 @@
             pointer-events: none;
         }
 
-        /* --- ŞİFRE EKRANI --- */
+        /* --- ŞİFRE / KARŞILAMA EKRANI --- */
         #lock-screen {
             position: fixed;
             inset: 0;
@@ -493,12 +493,12 @@
         <source src="muzik.mp3" type="audio/mpeg">
     </audio>
 
-    <!-- ŞİFRE GİRİŞ EKRANI -->
+    <!-- ŞİFRE / KARŞILAMA EKRANI -->
     <div id="lock-screen">
         <div class="lock-card" id="lock-card">
             <div class="lock-icon">☕</div>
-            <h1>Özel Menü</h1>
-            <p>İçecek listesini görmek için giriş şifresini yaz.</p>
+            <h1 id="lock-title">Özel Menü</h1>
+            <p id="lock-desc">İçecek listesini görmek için giriş şifresini yaz.</p>
             <input type="password" id="password-input" class="pass-input" placeholder="••••" autocomplete="off">
             <button id="unlock-btn" class="pass-btn">Menüyü Aç</button>
             <div id="error-msg" class="error-msg"></div>
@@ -559,16 +559,20 @@
         // ==========================================
         const SHEET_ID = "1DaNNim2_3VMIS0daOPrbijp68-i5UXO7t_38XUchdFY"; 
         const MENU_SIFRESI = "muhendiscicek"; 
+        const SIFREYI_HATIRLA = true; // false yaparsan her girişte şifreyi tekrar ister
         const KAPAK_FOTOSU = "kapak.jpg";
         const LOGO_FOTOSU = "logo.png";
-        const VARSAYILAN_SES_SEVIYESI = 0.45; // 0.0 (sessiz) ile 1.0 (tam ses) arası
+        const VARSAYILAN_SES_SEVIYESI = 0.45;
         // ==========================================
 
         let allDrinks = [];
         let currentCategory = null;
+        let isAlreadySaved = SIFREYI_HATIRLA && (localStorage.getItem("qr_menu_auth") === MENU_SIFRESI);
 
         const lockScreen = document.getElementById("lock-screen");
         const lockCard = document.getElementById("lock-card");
+        const lockTitle = document.getElementById("lock-title");
+        const lockDesc = document.getElementById("lock-desc");
         const passInput = document.getElementById("password-input");
         const unlockBtn = document.getElementById("unlock-btn");
         const errorMsg = document.getElementById("error-msg");
@@ -603,154 +607,10 @@
             bgMusic.play().then(() => {
                 updateMusicUI(true);
             }).catch(() => {
-                // Tarayıcı otomatik çalmayı engellerse ilk dokunuşta başlat
                 updateMusicUI(false);
-                const resumeOnTouch = () => {
-                    bgMusic.play().then(() => updateMusicUI(true)).catch(() => {});
-                    document.removeEventListener("pointerdown", resumeOnTouch);
-                };
-                document.addEventListener("pointerdown", resumeOnTouch, { once: true });
             });
         }
 
         musicToggle.addEventListener("click", (e) => {
             e.stopPropagation();
-            if (bgMusic.paused) {
-                bgMusic.play().then(() => updateMusicUI(true)).catch(() => {});
-            } else {
-                bgMusic.pause();
-                updateMusicUI(false);
-            }
-        });
-
-        if (localStorage.getItem("qr_menu_auth") === MENU_SIFRESI) {
-            unlockMenu(true);
-        }
-
-        function checkPassword() {
-            if (passInput.value.trim() === MENU_SIFRESI) {
-                localStorage.setItem("qr_menu_auth", MENU_SIFRESI);
-                startMusic(); // Şifre butonuna tıklandığı an müziği başlat
-                unlockMenu(false);
-            } else {
-                errorMsg.textContent = "Hatalı şifre, tekrar dene.";
-                lockCard.classList.remove("shake");
-                void lockCard.offsetWidth;
-                lockCard.classList.add("shake");
-                passInput.value = "";
-            }
-        }
-
-        function unlockMenu(instant) {
-            if (instant) {
-                lockScreen.style.display = "none";
-                startMusic();
-            } else {
-                lockScreen.classList.add("unlocked");
-                setTimeout(() => lockScreen.style.display = "none", 500);
-            }
-            menuApp.classList.add("visible");
-            fetchSheetData();
-        }
-
-        unlockBtn.addEventListener("click", checkPassword);
-        passInput.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") checkPassword();
-        });
-
-        function showHomeScreen() {
-            currentCategory = null;
-            tabBtns.forEach(b => b.classList.remove("active"));
-            menuView.classList.add("hidden");
-            homeView.classList.remove("hidden");
-        }
-
-        backHomeBtn.addEventListener("click", showHomeScreen);
-        headerTrigger.addEventListener("click", showHomeScreen);
-
-        async function fetchSheetData() {
-            try {
-                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
-                const response = await fetch(url);
-                const text = await response.text();
-                const jsonString = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
-                const data = JSON.parse(jsonString);
-
-                const rows = data.table.rows;
-                allDrinks = rows.map(row => {
-                    const c = row.c;
-                    return {
-                        kategori: c[0] && c[0].v ? String(c[0].v).trim() : "",
-                        ad: c[1] && c[1].v ? String(c[1].v).trim() : "",
-                        icerik: c[2] && c[2].v ? String(c[2].v).trim() : "",
-                        resim: c[3] && c[3].v ? String(c[3].v).trim() : ""
-                    };
-                }).filter(item => item.ad !== "" && item.ad.toLocaleLowerCase('tr-TR') !== "ad");
-
-                if (currentCategory) {
-                    renderMenu(currentCategory);
-                }
-            } catch (err) {
-                menuList.innerHTML = `<div class="status-box">Menü yüklenemedi. Tablo paylaşım ayarını kontrol et.</div>`;
-            }
-        }
-
-        function renderMenu(category) {
-            homeView.classList.add("hidden");
-            menuView.classList.remove("hidden");
-
-            const filtered = allDrinks.filter(
-                d => d.kategori.toLocaleLowerCase('tr-TR') === category.toLocaleLowerCase('tr-TR')
-            );
-
-            if (filtered.length === 0) {
-                menuList.innerHTML = `<div class="status-box">Bu kategoride henüz içecek yok.</div>`;
-                return;
-            }
-
-            menuList.innerHTML = "";
-            filtered.forEach((drink, index) => {
-                const card = document.createElement("div");
-                card.className = "drink-card";
-                card.style.animationDelay = `${index * 0.05}s`;
-
-                if (drink.resim) {
-                    const imgEl = document.createElement("img");
-                    imgEl.className = "drink-thumb";
-                    imgEl.src = drink.resim;
-                    imgEl.alt = drink.ad;
-                    imgEl.onerror = () => imgEl.style.display = "none";
-                    card.appendChild(imgEl);
-                }
-
-                const infoEl = document.createElement("div");
-                infoEl.className = "drink-info";
-
-                const nameEl = document.createElement("div");
-                nameEl.className = "drink-name";
-                nameEl.textContent = drink.ad;
-                infoEl.appendChild(nameEl);
-
-                if (drink.icerik) {
-                    const descEl = document.createElement("div");
-                    descEl.className = "drink-desc";
-                    descEl.textContent = drink.icerik;
-                    infoEl.appendChild(descEl);
-                }
-
-                card.appendChild(infoEl);
-                menuList.appendChild(card);
-            });
-        }
-
-        tabBtns.forEach(btn => {
-            btn.addEventListener("click", () => {
-                tabBtns.forEach(b => b.classList.remove("active"));
-                btn.classList.add("active");
-                currentCategory = btn.dataset.cat;
-                renderMenu(currentCategory);
-            });
-        });
-    </script>
-</body>
-</html>
+            if (bgMusic.paused
