@@ -64,7 +64,7 @@
         #lock-screen {
             position: fixed;
             inset: 0;
-            background: rgba(250, 246, 240, 0.94);
+            background: rgba(250, 246, 240, 0.96);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             display: flex;
@@ -72,7 +72,7 @@
             justify-content: center;
             padding: 24px;
             z-index: 100;
-            transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1), transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+            transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1), transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         #lock-screen.unlocked {
@@ -128,7 +128,7 @@
             font-size: 18px;
             font-weight: 600;
             text-align: center;
-            letter-spacing: 3px;
+            letter-spacing: 2px;
             color: var(--text-primary);
             outline: none;
             transition: border-color 0.25s ease, box-shadow 0.25s ease;
@@ -180,7 +180,7 @@
             padding: 28px 20px 80px;
             opacity: 0;
             transform: translateY(15px);
-            transition: opacity 0.5s ease 0.15s, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.15s;
+            transition: opacity 0.45s ease 0.1s, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.1s;
         }
 
         #menu-app.visible {
@@ -488,19 +488,17 @@
 </head>
 <body>
 
-    <!-- ARKA PLAN MÜZİĞİ -->
-    <audio id="bg-music" loop preload="auto">
-        <source src="muzik.mp3" type="audio/mpeg">
-    </audio>
+    <!-- ARKA PLAN MÜZİĞİ (Doğrudan src ile iOS/Android uyumlu) -->
+    <audio id="bg-music" src="muzik.mp3" loop preload="auto" playsinline></audio>
 
-    <!-- ŞİFRE GİRİŞ EKRANI -->
+    <!-- ŞİFRE EKRANI -->
     <div id="lock-screen">
         <div class="lock-card" id="lock-card">
             <div class="lock-icon">☕</div>
             <h1>Özel Menü</h1>
             <p>İçecek listesini görmek için giriş şifresini yaz.</p>
-            <input type="password" id="password-input" class="pass-input" placeholder="••••" autocomplete="off">
-            <button id="unlock-btn" class="pass-btn">Menüyü Aç</button>
+            <input type="password" id="password-input" class="pass-input" placeholder="••••" autocomplete="off" autocapitalize="none">
+            <button type="button" id="unlock-btn" class="pass-btn">Menüyü Aç</button>
             <div id="error-msg" class="error-msg"></div>
         </div>
     </div>
@@ -517,9 +515,9 @@
 
         <div class="tabs-wrapper">
             <div class="tabs">
-                <button class="tab-btn" data-cat="Sıcak">Sıcak</button>
-                <button class="tab-btn" data-cat="Soğuk">Soğuk</button>
-                <button class="tab-btn" data-cat="Alkol">Alkol</button>
+                <button type="button" class="tab-btn" data-cat="Sıcak">Sıcak</button>
+                <button type="button" class="tab-btn" data-cat="Soğuk">Soğuk</button>
+                <button type="button" class="tab-btn" data-cat="Alkol">Alkol</button>
             </div>
         </div>
 
@@ -537,7 +535,7 @@
         <!-- KATEGORİ SEÇİLİNCE AÇILAN LİSTE -->
         <section id="menu-view" class="hidden">
             <div class="back-home-bar">
-                <button id="back-home-btn" class="back-home-btn">← Ana Ekran</button>
+                <button type="button" id="back-home-btn" class="back-home-btn">← Ana Ekran</button>
             </div>
             <div id="menu-list" class="menu-list">
                 <div class="status-box">Menü yükleniyor...</div>
@@ -545,7 +543,7 @@
         </section>
 
         <!-- SAĞ ALT MÜZİK KONTROLÜ -->
-        <button id="music-toggle" class="music-toggle" aria-label="Müziği Aç veya Durdur">
+        <button type="button" id="music-toggle" class="music-toggle" aria-label="Müziği Aç veya Durdur">
             <div class="music-bars">
                 <span></span><span></span><span></span>
             </div>
@@ -561,11 +559,12 @@
         const MENU_SIFRESI = "muhendiscicek"; 
         const KAPAK_FOTOSU = "kapak.jpg";
         const LOGO_FOTOSU = "logo.png";
-        const VARSAYILAN_SES_SEVIYESI = 0.45; // 0.0 (sessiz) ile 1.0 (tam ses) arası
+        const VARSAYILAN_SES_SEVIYESI = 0.45;
         // ==========================================
 
         let allDrinks = [];
         let currentCategory = null;
+        let userMutedMusic = false; // Kullanıcı müzik butonundan kendisi durdurduysa tekrar zorla başlatma
 
         const lockScreen = document.getElementById("lock-screen");
         const lockCard = document.getElementById("lock-card");
@@ -587,7 +586,10 @@
 
         heroImg.src = KAPAK_FOTOSU;
         logoImg.src = LOGO_FOTOSU;
-        bgMusic.volume = VARSAYILAN_SES_SEVIYESI;
+
+        try {
+            bgMusic.volume = VARSAYILAN_SES_SEVIYESI;
+        } catch (e) {}
 
         function updateMusicUI(isPlaying) {
             if (isPlaying) {
@@ -599,38 +601,68 @@
             }
         }
 
-        function startMusic() {
-            bgMusic.play().then(() => {
-                updateMusicUI(true);
-            }).catch(() => {
-                // Tarayıcı otomatik çalmayı engellerse ilk dokunuşta başlat
-                updateMusicUI(false);
-                const resumeOnTouch = () => {
-                    bgMusic.play().then(() => updateMusicUI(true)).catch(() => {});
-                    document.removeEventListener("pointerdown", resumeOnTouch);
-                };
-                document.addEventListener("pointerdown", resumeOnTouch, { once: true });
-            });
+        // Doğrudan kullanıcı tıklaması (click) içinde çağrıldığında mobil tarayıcıların izin verdiği fonksiyon
+        function playMusicOnGesture() {
+            if (userMutedMusic || !bgMusic.paused) return;
+            const playPromise = bgMusic.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    updateMusicUI(true);
+                }).catch(() => {
+                    updateMusicUI(false);
+                });
+            }
         }
 
         musicToggle.addEventListener("click", (e) => {
             e.stopPropagation();
             if (bgMusic.paused) {
-                bgMusic.play().then(() => updateMusicUI(true)).catch(() => {});
+                userMutedMusic = false;
+                playMusicOnGesture();
             } else {
+                userMutedMusic = true;
                 bgMusic.pause();
                 updateMusicUI(false);
             }
         });
 
-        if (localStorage.getItem("qr_menu_auth") === MENU_SIFRESI) {
+        function getSavedAuth() {
+            try {
+                return localStorage.getItem("qr_menu_auth");
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function setSavedAuth(val) {
+            try {
+                localStorage.setItem("qr_menu_auth", val);
+            } catch (e) {}
+        }
+
+        function unlockMenu(instant) {
+            if (instant) {
+                lockScreen.style.display = "none";
+            } else {
+                lockScreen.classList.add("unlocked");
+                setTimeout(() => {
+                    lockScreen.style.display = "none";
+                }, 450);
+            }
+            menuApp.classList.add("visible");
+            fetchSheetData();
+        }
+
+        if (getSavedAuth() === MENU_SIFRESI.toLocaleLowerCase('tr-TR')) {
             unlockMenu(true);
         }
 
         function checkPassword() {
-            if (passInput.value.trim() === MENU_SIFRESI) {
-                localStorage.setItem("qr_menu_auth", MENU_SIFRESI);
-                startMusic(); // Şifre butonuna tıklandığı an müziği başlat
+            const girilen = passInput.value.trim().toLocaleLowerCase('tr-TR');
+            const dogruSifre = MENU_SIFRESI.trim().toLocaleLowerCase('tr-TR');
+
+            if (girilen === dogruSifre) {
+                setSavedAuth(dogruSifre);
                 unlockMenu(false);
             } else {
                 errorMsg.textContent = "Hatalı şifre, tekrar dene.";
@@ -641,21 +673,12 @@
             }
         }
 
-        function unlockMenu(instant) {
-            if (instant) {
-                lockScreen.style.display = "none";
-                startMusic();
-            } else {
-                lockScreen.classList.add("unlocked");
-                setTimeout(() => lockScreen.style.display = "none", 500);
-            }
-            menuApp.classList.add("visible");
-            fetchSheetData();
-        }
-
         unlockBtn.addEventListener("click", checkPassword);
-        passInput.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") checkPassword();
+        passInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                checkPassword();
+            }
         });
 
         function showHomeScreen() {
@@ -743,8 +766,10 @@
             });
         }
 
+        // Kategori butonuna tıklanınca hem menüyü aç hem telefonda müziği başlat
         tabBtns.forEach(btn => {
             btn.addEventListener("click", () => {
+                playMusicOnGesture();
                 tabBtns.forEach(b => b.classList.remove("active"));
                 btn.classList.add("active");
                 currentCategory = btn.dataset.cat;
