@@ -10,17 +10,21 @@
     <style>
         :root {
             --bg-main: #FAF6F0;
-            --bg-card: #FFFFFF;
+            --bg-card: rgba(255, 255, 255, 0.92);
             --bg-pill: #EFE7DC;
             --text-primary: #2C221E;
             --text-secondary: #7A6B63;
             --accent: #C86D51;
             --accent-hover: #B35B40;
-            --shadow-soft: 0 10px 30px -5px rgba(44, 34, 30, 0.06);
-            --shadow-card: 0 4px 15px rgba(44, 34, 30, 0.04);
-            --radius-lg: 24px;
+            --shadow-soft: 0 12px 32px -6px rgba(44, 34, 30, 0.08);
+            --shadow-card: 0 4px 15px rgba(44, 34, 30, 0.05);
+            --radius-lg: 26px;
             --radius-md: 18px;
             --radius-pill: 999px;
+
+            /* Arka plan fotoğrafı ayarları */
+            --arkaplan-resmi: url('arkaplan.jpg');
+            --arkaplan-opaklik: 0.12; /* 0.05 (çok silik) - 0.30 (belirgin) arası değiştirebilirsin */
         }
 
         * {
@@ -39,13 +43,30 @@
             flex-direction: column;
             align-items: center;
             overflow-x: hidden;
+            position: relative;
+        }
+
+        /* --- SABİT DÜŞÜK OPAKLI ARKA PLAN FOTOĞRAFI --- */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background-image: var(--arkaplan-resmi);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: var(--arkaplan-opaklik);
+            z-index: -1;
+            pointer-events: none;
         }
 
         /* --- ŞİFRE EKRANI --- */
         #lock-screen {
             position: fixed;
             inset: 0;
-            background: var(--bg-main);
+            background: rgba(250, 246, 240, 0.94);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -61,7 +82,7 @@
         }
 
         .lock-card {
-            background: var(--bg-card);
+            background: #FFFFFF;
             width: 100%;
             max-width: 360px;
             padding: 36px 28px;
@@ -152,7 +173,7 @@
         }
         .shake { animation: shake 0.3s ease-in-out; }
 
-        /* --- ANA MENÜ EKRANI --- */
+        /* --- ANA UYGULAMA ALANI --- */
         #menu-app {
             width: 100%;
             max-width: 520px;
@@ -167,9 +188,26 @@
             transform: translateY(0);
         }
 
+        /* Başlık ve Logo Alanı */
         header {
             text-align: center;
-            margin-bottom: 24px;
+            margin-bottom: 22px;
+            cursor: pointer;
+        }
+
+        .header-brand {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .header-logo {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            object-fit: cover;
+            box-shadow: 0 4px 12px rgba(44, 34, 30, 0.08);
         }
 
         header h2 {
@@ -180,10 +218,10 @@
         }
 
         header span {
-            display: inline-block;
+            display: block;
             font-size: 13px;
             color: var(--text-secondary);
-            margin-top: 4px;
+            margin-top: 6px;
         }
 
         /* Kategori Sekmeleri */
@@ -197,7 +235,7 @@
             padding: 6px;
             border-radius: var(--radius-pill);
             margin-bottom: 24px;
-            box-shadow: 0 4px 20px rgba(44, 34, 30, 0.04);
+            box-shadow: 0 4px 20px rgba(44, 34, 30, 0.05);
         }
 
         .tabs {
@@ -225,7 +263,93 @@
             box-shadow: 0 4px 12px rgba(200, 109, 81, 0.3);
         }
 
-        /* İçecek Kartları */
+        /* --- FOTOĞRAFLI ANA SAYFA (KATEGORİ SEÇİLMEDİĞİNDE) --- */
+        #home-view {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: heroIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        #home-view.hidden {
+            display: none;
+        }
+
+        @keyframes heroIn {
+            from {
+                opacity: 0;
+                transform: translateY(16px) scale(0.97);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .hero-photo-card {
+            width: 100%;
+            background: var(--bg-card);
+            backdrop-filter: blur(6px);
+            padding: 12px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-soft);
+        }
+
+        .hero-photo-card img {
+            width: 100%;
+            aspect-ratio: 4 / 5;
+            object-fit: cover;
+            border-radius: 18px;
+            display: block;
+        }
+
+        .hero-caption {
+            text-align: center;
+            padding: 16px 10px 8px;
+        }
+
+        .hero-caption p {
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .hero-caption small {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* --- İÇECEK LİSTESİ --- */
+        #menu-view.hidden {
+            display: none;
+        }
+
+        .back-home-bar {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 12px;
+        }
+
+        .back-home-btn {
+            border: none;
+            background: var(--bg-pill);
+            color: var(--text-secondary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 7px 14px;
+            border-radius: var(--radius-pill);
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.15s ease;
+        }
+
+        .back-home-btn:active {
+            transform: scale(0.96);
+        }
+
         .menu-list {
             display: flex;
             flex-direction: column;
@@ -234,12 +358,13 @@
 
         .drink-card {
             background: var(--bg-card);
-            padding: 20px 22px;
+            backdrop-filter: blur(6px);
+            padding: 18px 20px;
             border-radius: var(--radius-md);
             box-shadow: var(--shadow-card);
             display: flex;
-            flex-direction: column;
-            justify-content: center;
+            align-items: center;
+            gap: 16px;
             opacity: 0;
             transform: translateY(14px) scale(0.98);
             animation: cardIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -257,6 +382,22 @@
             }
         }
 
+        .drink-thumb {
+            width: 66px;
+            height: 66px;
+            border-radius: 14px;
+            object-fit: cover;
+            flex-shrink: 0;
+            background: var(--bg-pill);
+        }
+
+        .drink-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            flex: 1;
+        }
+
         .drink-name {
             font-family: 'Outfit', sans-serif;
             font-size: 19px;
@@ -268,7 +409,7 @@
         .drink-desc {
             font-size: 13.5px;
             color: var(--text-secondary);
-            margin-top: 6px;
+            margin-top: 5px;
             line-height: 1.45;
         }
 
@@ -277,6 +418,8 @@
             padding: 40px 20px;
             color: var(--text-secondary);
             font-size: 14px;
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
         }
     </style>
 </head>
@@ -294,36 +437,58 @@
         </div>
     </div>
 
-    <!-- ANA MENÜ EKRANI -->
+    <!-- ANA UYGULAMA EKRANI -->
     <main id="menu-app">
-        <header>
-            <h2>İçecek Menüsü</h2>
+        <header id="header-home-trigger" title="Ana Sayfaya Dön">
+            <div class="header-brand">
+                <img id="logo-img" src="logo.png" alt="Logo" class="header-logo" onerror="this.style.display='none'">
+                <h2>İçecek Menüsü</h2>
+            </div>
             <span>Bugün ne içmek istersin?</span>
         </header>
 
         <div class="tabs-wrapper">
             <div class="tabs">
-                <button class="tab-btn active" data-cat="Sıcak">Sıcak</button>
+                <button class="tab-btn" data-cat="Sıcak">Sıcak</button>
                 <button class="tab-btn" data-cat="Soğuk">Soğuk</button>
                 <button class="tab-btn" data-cat="Alkol">Alkol</button>
             </div>
         </div>
 
-        <div id="menu-list" class="menu-list">
-            <div class="status-box">Menü yükleniyor...</div>
-        </div>
+        <!-- ANA SAYFA (KATEGORİ SEÇİLMEMİŞKEN GÖRÜNÜR) -->
+        <section id="home-view">
+            <div class="hero-photo-card">
+                <img id="hero-img" src="kapak.jpg" alt="Menü Kapak Fotoğrafı" onerror="this.src='https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80'">
+                <div class="hero-caption">
+                    <p>Hoş Geldin</p>
+                    <small>İçecekleri görmek için yukarıdan bir kategori seç</small>
+                </div>
+            </div>
+        </section>
+
+        <!-- KATEGORİ SEÇİLİNCE AÇILAN LİSTE -->
+        <section id="menu-view" class="hidden">
+            <div class="back-home-bar">
+                <button id="back-home-btn" class="back-home-btn">← Ana Ekran</button>
+            </div>
+            <div id="menu-list" class="menu-list">
+                <div class="status-box">Menü yükleniyor...</div>
+            </div>
+        </section>
     </main>
 
     <script>
         // ==========================================
-        // AYARLAR (BURAYI KENDİNE GÖRE DÜZENLE)
+        // AYARLAR
         // ==========================================
         const SHEET_ID = "1DaNNim2_3VMIS0daOPrbijp68-i5UXO7t_38XUchdFY"; 
         const MENU_SIFRESI = "muhendiscicek"; 
+        const KAPAK_FOTOSU = "kapak.jpg";
+        const LOGO_FOTOSU = "logo.png";
         // ==========================================
 
         let allDrinks = [];
-        let currentCategory = "Sıcak";
+        let currentCategory = null; // Başlangıçta kategori seçili değil (Ana Sayfa açık)
 
         const lockScreen = document.getElementById("lock-screen");
         const lockCard = document.getElementById("lock-card");
@@ -331,10 +496,18 @@
         const unlockBtn = document.getElementById("unlock-btn");
         const errorMsg = document.getElementById("error-msg");
         const menuApp = document.getElementById("menu-app");
+        const homeView = document.getElementById("home-view");
+        const menuView = document.getElementById("menu-view");
         const menuList = document.getElementById("menu-list");
         const tabBtns = document.querySelectorAll(".tab-btn");
+        const heroImg = document.getElementById("hero-img");
+        const logoImg = document.getElementById("logo-img");
+        const backHomeBtn = document.getElementById("back-home-btn");
+        const headerTrigger = document.getElementById("header-home-trigger");
 
-        // Daha önce şifre girildiyse kilidi otomatik aç
+        heroImg.src = KAPAK_FOTOSU;
+        logoImg.src = LOGO_FOTOSU;
+
         if (localStorage.getItem("qr_menu_auth") === MENU_SIFRESI) {
             unlockMenu(true);
         }
@@ -346,7 +519,7 @@
             } else {
                 errorMsg.textContent = "Hatalı şifre, tekrar dene.";
                 lockCard.classList.remove("shake");
-                void lockCard.offsetWidth; // Animasyonu sıfırla
+                void lockCard.offsetWidth;
                 lockCard.classList.add("shake");
                 passInput.value = "";
             }
@@ -368,28 +541,21 @@
             if (e.key === "Enter") checkPassword();
         });
 
-        // Google Sheets'ten canlı veri çekme (gviz JSON API)
-        async function fetchSheetData() {
-            if (SHEET_ID === "BURAYA_GOOGLE_SHEET_ID_YAZ") {
-                // Demo verisi (ID girilmeden önizleme yapabilmen için)
-                allDrinks = [
-                    { kategori: "Sıcak", ad: "V60 Pour Over", icerik: "Etiyopya Yirgacheffe çekirdekleri, çiçeksi notalar" },
-                    { kategori: "Sıcak", ad: "Türk Kahvesi", icerik: "" },
-                    { kategori: "Sıcak", ad: "Flat White", icerik: "Çift shot espresso ve kadifemsi mikro köpük" },
-                    { kategori: "Soğuk", ad: "Cold Brew", icerik: "16 saat soğuk demleme" },
-                    { kategori: "Soğuk", ad: "Ev Yapımı Limonata", icerik: "Taze nane ve zencefil dokunuşuyla" },
-                    { kategori: "Alkol", ad: "Negroni", icerik: "Cin, Campari, tatlı vermut ve portakal kabuğu" },
-                    { kategori: "Alkol", ad: "Aperol Spritz", icerik: "" }
-                ];
-                renderMenu(currentCategory);
-                return;
-            }
+        function showHomeScreen() {
+            currentCategory = null;
+            tabBtns.forEach(b => b.classList.remove("active"));
+            menuView.classList.add("hidden");
+            homeView.classList.remove("hidden");
+        }
 
+        backHomeBtn.addEventListener("click", showHomeScreen);
+        headerTrigger.addEventListener("click", showHomeScreen);
+
+        async function fetchSheetData() {
             try {
                 const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
                 const response = await fetch(url);
                 const text = await response.text();
-                // Google'ın JSONP sarmalayıcısını temizle
                 const jsonString = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
                 const data = JSON.parse(jsonString);
 
@@ -399,19 +565,25 @@
                     return {
                         kategori: c[0] && c[0].v ? String(c[0].v).trim() : "",
                         ad: c[1] && c[1].v ? String(c[1].v).trim() : "",
-                        icerik: c[2] && c[2].v ? String(c[2].v).trim() : ""
+                        icerik: c[2] && c[2].v ? String(c[2].v).trim() : "",
+                        resim: c[3] && c[3].v ? String(c[3].v).trim() : ""
                     };
-                }).filter(item => item.ad !== "" && item.ad.toLowerCase() !== "ad");
+                }).filter(item => item.ad !== "" && item.ad.toLocaleLowerCase('tr-TR') !== "ad");
 
-                renderMenu(currentCategory);
+                if (currentCategory) {
+                    renderMenu(currentCategory);
+                }
             } catch (err) {
                 menuList.innerHTML = `<div class="status-box">Menü yüklenemedi. Tablo paylaşım ayarını kontrol et.</div>`;
             }
         }
 
         function renderMenu(category) {
+            homeView.classList.add("hidden");
+            menuView.classList.remove("hidden");
+
             const filtered = allDrinks.filter(
-                d => d.kategori.toLowerCase() === category.toLowerCase()
+                d => d.kategori.toLocaleLowerCase('tr-TR') === category.toLocaleLowerCase('tr-TR')
             );
 
             if (filtered.length === 0) {
@@ -423,27 +595,37 @@
             filtered.forEach((drink, index) => {
                 const card = document.createElement("div");
                 card.className = "drink-card";
-                // Kartların peş peşe akıcı gelmesi için kademeli gecikme
                 card.style.animationDelay = `${index * 0.05}s`;
+
+                if (drink.resim) {
+                    const imgEl = document.createElement("img");
+                    imgEl.className = "drink-thumb";
+                    imgEl.src = drink.resim;
+                    imgEl.alt = drink.ad;
+                    imgEl.onerror = () => imgEl.style.display = "none";
+                    card.appendChild(imgEl);
+                }
+
+                const infoEl = document.createElement("div");
+                infoEl.className = "drink-info";
 
                 const nameEl = document.createElement("div");
                 nameEl.className = "drink-name";
                 nameEl.textContent = drink.ad;
-                card.appendChild(nameEl);
+                infoEl.appendChild(nameEl);
 
-                // İçerik boş değilse alt satırı oluştur
                 if (drink.icerik) {
                     const descEl = document.createElement("div");
                     descEl.className = "drink-desc";
                     descEl.textContent = drink.icerik;
-                    card.appendChild(descEl);
+                    infoEl.appendChild(descEl);
                 }
 
+                card.appendChild(infoEl);
                 menuList.appendChild(card);
             });
         }
 
-        // Kategori geçişleri
         tabBtns.forEach(btn => {
             btn.addEventListener("click", () => {
                 tabBtns.forEach(b => b.classList.remove("active"));
