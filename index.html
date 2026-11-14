@@ -64,7 +64,7 @@
         #lock-screen {
             position: fixed;
             inset: 0;
-            background: rgba(250, 246, 240, 0.94);
+            background: rgba(250, 246, 240, 0.96);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             display: flex;
@@ -72,7 +72,7 @@
             justify-content: center;
             padding: 24px;
             z-index: 100;
-            transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1), transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+            transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1), transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         #lock-screen.unlocked {
@@ -128,7 +128,7 @@
             font-size: 18px;
             font-weight: 600;
             text-align: center;
-            letter-spacing: 3px;
+            letter-spacing: 2px;
             color: var(--text-primary);
             outline: none;
             transition: border-color 0.25s ease, box-shadow 0.25s ease;
@@ -180,7 +180,7 @@
             padding: 28px 20px 80px;
             opacity: 0;
             transform: translateY(15px);
-            transition: opacity 0.5s ease 0.15s, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.15s;
+            transition: opacity 0.45s ease 0.1s, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.1s;
         }
 
         #menu-app.visible {
@@ -489,7 +489,7 @@
 <body>
 
     <!-- ARKA PLAN MÜZİĞİ -->
-    <audio id="bg-music" loop preload="auto">
+    <audio id="bg-music" loop preload="metadata">
         <source src="muzik.mp3" type="audio/mpeg">
     </audio>
 
@@ -499,8 +499,8 @@
             <div class="lock-icon">☕</div>
             <h1 id="lock-title">Özel Menü</h1>
             <p id="lock-desc">İçecek listesini görmek için giriş şifresini yaz.</p>
-            <input type="password" id="password-input" class="pass-input" placeholder="••••" autocomplete="off">
-            <button id="unlock-btn" class="pass-btn">Menüyü Aç</button>
+            <input type="password" id="password-input" class="pass-input" placeholder="••••" autocomplete="off" autocapitalize="none">
+            <button type="button" id="unlock-btn" class="pass-btn">Menüyü Aç</button>
             <div id="error-msg" class="error-msg"></div>
         </div>
     </div>
@@ -559,7 +559,7 @@
         // ==========================================
         const SHEET_ID = "1DaNNim2_3VMIS0daOPrbijp68-i5UXO7t_38XUchdFY"; 
         const MENU_SIFRESI = "muhendiscicek"; 
-        const SIFREYI_HATIRLA = true; // false yaparsan her girişte şifreyi tekrar ister
+        const SIFREYI_HATIRLA = true;
         const KAPAK_FOTOSU = "kapak.jpg";
         const LOGO_FOTOSU = "logo.png";
         const VARSAYILAN_SES_SEVIYESI = 0.45;
@@ -567,7 +567,23 @@
 
         let allDrinks = [];
         let currentCategory = null;
-        let isAlreadySaved = SIFREYI_HATIRLA && (localStorage.getItem("qr_menu_auth") === MENU_SIFRESI);
+
+        // Güvenli localStorage okuma/yazma (QR okuyucu tarayıcılarda hata vermemesi için)
+        function getSavedAuth() {
+            try {
+                return localStorage.getItem("qr_menu_auth");
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function setSavedAuth(val) {
+            try {
+                localStorage.setItem("qr_menu_auth", val);
+            } catch (e) {}
+        }
+
+        let isAlreadySaved = SIFREYI_HATIRLA && (getSavedAuth() === MENU_SIFRESI.toLocaleLowerCase('tr-TR'));
 
         const lockScreen = document.getElementById("lock-screen");
         const lockCard = document.getElementById("lock-card");
@@ -591,7 +607,10 @@
 
         heroImg.src = KAPAK_FOTOSU;
         logoImg.src = LOGO_FOTOSU;
-        bgMusic.volume = VARSAYILAN_SES_SEVIYESI;
+
+        try {
+            bgMusic.volume = VARSAYILAN_SES_SEVIYESI;
+        } catch (e) {}
 
         function updateMusicUI(isPlaying) {
             if (isPlaying) {
@@ -603,14 +622,71 @@
             }
         }
 
-        function startMusic() {
-            bgMusic.play().then(() => {
-                updateMusicUI(true);
-            }).catch(() => {
+        function safePlayMusic() {
+            try {
+                const playPromise = bgMusic.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        updateMusicUI(true);
+                    }).catch(() => {
+                        updateMusicUI(false);
+                    });
+                }
+            } catch (e) {
                 updateMusicUI(false);
-            });
+            }
         }
 
         musicToggle.addEventListener("click", (e) => {
             e.stopPropagation();
-            if (bgMusic.paused
+            if (bgMusic.paused) {
+                safePlayMusic();
+            } else {
+                bgMusic.pause();
+                updateMusicUI(false);
+            }
+        });
+
+        function unlockMenu(instant) {
+            if (instant) {
+                lockScreen.style.display = "none";
+            } else {
+                lockScreen.classList.add("unlocked");
+                setTimeout(() => {
+                    lockScreen.style.display = "none";
+                }, 450);
+            }
+            menuApp.classList.add("visible");
+            fetchSheetData();
+        }
+
+        function checkPassword() {
+            if (isAlreadySaved) {
+                unlockMenu(false);
+                safePlayMusic();
+                return;
+            }
+
+            const girilen = passInput.value.trim().toLocaleLowerCase('tr-TR');
+            const dogruSifre = MENU_SIFRESI.trim().toLocaleLowerCase('tr-TR');
+
+            if (girilen === dogruSifre) {
+                if (SIFREYI_HATIRLA) {
+                    setSavedAuth(dogruSifre);
+                }
+                unlockMenu(false);
+                safePlayMusic();
+            } else {
+                errorMsg.textContent = "Hatalı şifre, tekrar dene.";
+                lockCard.classList.remove("shake");
+                void lockCard.offsetWidth;
+                lockCard.classList.add("shake");
+                passInput.value = "";
+            }
+        }
+
+        // Daha önce şifre girildiyse şifre kutusunu gizle, tek tıkla giriş sun
+        if (isAlreadySaved) {
+            lockTitle.textContent = "Tekrar Hoş Geldin";
+            lockDesc.textContent = "Müziği ve menüyü başlatmak için dokun.";
+            passInput.style.display = "
